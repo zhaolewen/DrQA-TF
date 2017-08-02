@@ -17,8 +17,9 @@ class StackedBRNN():
             bw_cell = tf.nn.rnn_cell.MultiRNNCell([bw_cell] * num_layers, state_is_tuple=True)
             print(bw_cell.state_size)
 
-        words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
-        self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
+        with tf.name_scope("doc_length"):
+            words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
+            self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
         output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, input_data, dtype=tf.float32, sequence_length=self.length)
         print(output)
 
@@ -39,7 +40,7 @@ class SeqAttnMatch():
         Output shapes:
             matched_seq = batch * len1 * h
         """
-        with tf.variable_scope('BilinearSeqAttention'):
+        with tf.variable_scope('SeqAttnMatch'):
 
             W = tf.Variable(tf.random_normal(shape=[input_size, input_size], dtype=tf.float32))
             # b = tf.Variable(tf.random_normal(([None, input_size]), dtype=tf.float32))
@@ -57,8 +58,18 @@ class SeqAttnMatch():
         scores = tf.matmul(x_proj, y_proj, transpose_b=True)
 
         # Normalize with softmax
-        alpha_flat = tf.nn.softmax(tf.reshape(scores,[-1, y.get_shape().as_list()[1]]))
-        alpha = tf.reshape(alpha_flat,[-1, x.get_shape().as_list()[1], y.get_shape().as_list()[1]])
+        with tf.name_scope("softmax"):
+            alpha_flat = tf.reshape(scores,[-1, y.get_shape().as_list()[1]])
+
+            alpha_flat = tf.exp(alpha_flat)
+            z = tf.zeros(alpha_flat.get_shape())
+            alpha_flat = tf.where(y_mask, alpha_flat, z)
+
+            alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
+            alpha = tf.div(alpha_flat, alpha_soft)
+
+        #alpha_flat = tf.nn.softmax()
+        #alpha = tf.reshape(alpha_flat,[-1, x.get_shape().as_list()[1], y.get_shape().as_list()[1]])
 
         # Take weighted average
         self.matched_seq = tf.matmul(alpha, y)
@@ -85,7 +96,9 @@ class BilinearSeqAttn():
             Wy = tf.matmul(y, W)
 
             xWy = tf.matmul(x,tf.expand_dims(Wy, 2))
-            self.alpha = tf.squeeze(xWy, 2, name="alpha")
+            xWy = tf.squeeze(xWy, 2, name="alpha")
+            z = tf.zeros(xWy.get_shape())
+            self.alpha = tf.where(x_mask, z, xWy)
 
             #self.alpha = tf.nn.softmax(xWy)
 

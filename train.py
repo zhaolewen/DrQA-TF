@@ -19,11 +19,12 @@ parser = argparse.ArgumentParser(description='Train a Document Reader model.')
 # system
 parser.add_argument('--log_file', default='output.log',help='path for log file.')
 parser.add_argument('--log_per_updates', type=int, default=3, help='log model loss per x updates (mini-batches).')
-parser.add_argument('--data_file', default='../data/SQuAD/data.msgpack',help='path to preprocessed data file.')
+parser.add_argument('--data_file', default='./SQuAD/data.msgpack',help='path to preprocessed data file.')
 parser.add_argument('--model_dir', default='./summary/',help='path to store saved models.')
 parser.add_argument('--save_last_only', action='store_true',help='only save the final models.')
 parser.add_argument('--eval_per_epoch', type=int, default=1,help='perform evaluation per x epoches.')
-parser.add_argument('--squad_dir', default='../data/SQuAD/',help='directory for SQuAD files')
+parser.add_argument('--eval_per_step', type=int, default=100,help='perform evaluation per x step.')
+parser.add_argument('--squad_dir', default='./SQuAD/',help='directory for SQuAD files')
 # training
 parser.add_argument('-e', '--epoches', type=int, default=20)
 parser.add_argument('-bs', '--batch_size', type=int, default=32)
@@ -112,25 +113,26 @@ def main():
                     step, tr_summary, _, loss, preds, y_true = model.train(batch, sess)
                     train_summary_writer.add_summary(tr_summary, step)
                     em, f1 = score(preds, y_true)
-                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":step,"precision":em,"f1":f1,"loss":loss})
+                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
                         log.warning("train EM: {} F1: {}".format(em, f1))
 
                 # eval
-                if epoch % args.eval_per_epoch == 0:
-                    save_path = saver.save(sess, out_dir + "model_max.ckpt")
-                    print("max model saved in file: %s" % save_path)
-
+                if epoch % args.eval_per_step == 0:
                     batches = BatchGen(dev, batch_size=args.batch_size, opt=opt, evaluation=True)
                     predictions = []
                     for batch in batches:
                         predictions.extend(model.test(batch, sess))
                     em, f1 = score(predictions, dev_y)
                     sendStatElastic(
-                        {"phase": "test", "name": "DrQA", "run_name": run_name, "step": step, "precision": em,"f1": f1})
+                        {"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                     log.warning("dev EM: {} F1: {}".format(em, f1))
+
+                if epoch % args.eval_per_epoch == 0:
+                    save_path = saver.save(sess, out_dir + "model_max.ckpt")
+                    print("max model saved in file: %s" % save_path)
 
 
 def get_max_len(dt1, dt2=None):

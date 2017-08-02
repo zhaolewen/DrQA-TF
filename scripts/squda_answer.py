@@ -1,4 +1,4 @@
-import re
+import re, time
 import random
 import string
 from collections import Counter
@@ -183,6 +183,7 @@ class BatchGen:
             else:
                 yield (context_id, context_feature, context_tag, context_ent, context_mask, question_id, question_mask, y_s, y_e, text, span)
 
+t_initial = time.time()
 print("Loading data...")
 train, dev, dev_y, embedding, opt = load_data()
 print("Loading checkpoint...")
@@ -211,7 +212,10 @@ with graph.as_default():
         batches = BatchGen(dev, batch_size=128, opt=opt, evaluation=True)
         predictions = []
         batch_count = 0
+
         for batch in batches:
+            t_start = time.time()
+
             feed_dict = {
                 tf_doc_words: batch[0], tf_word_feat: batch[1], tf_pos: batch[2],
                 tf_ner: batch[3], tf_doc_mask: batch[4], tf_q_words: batch[5], tf_q_mask: batch[6]
@@ -226,23 +230,33 @@ with graph.as_default():
             spans = batch[-1]
 
             max_len = len(sc_s[0])
-            print("batch {}: {} questions".format(batch_count, len(sc_s)))
+
             for i in range(len(sc_s)):
                 scores = np.outer(sc_s[i], sc_e[i])
                 scores = np.tril(np.triu(scores), max_len-1)
                 #scores = scores.triu().tril(max_len - 1)
 
                 s_idx, e_idx = np.unravel_index(np.argmax(scores), scores.shape)
-                st = [sp for sp in spans[i] if sp[0]<s_idx and sp[1]>=s_idx]
-                ed = [sp for sp in spans[i] if sp[0] <= e_idx and sp[1] > e_idx]
-                if len(st)>0 and len(ed)>0:
-                    s_offset = st[0][0]
-                    e_offset = ed[0][1]
+                if s_idx < len(spans[i]) and e_idx < len(spans[i]):
+                    s_offset = spans[i][s_idx][0]
+                    e_offset = spans[i][e_idx][1]
+
+                    if s_offset<e_offset:
+                        predictions.append(text[i][s_offset:e_offset])
+                    else:
+                        predictions.append("<NA>")
+                #st = [sp for sp in spans[i] if sp[0]<s_idx and sp[1]>=s_idx]
+                #ed = [sp for sp in spans[i] if sp[0] <= e_idx and sp[1] > e_idx]
+                #if len(st)>0 and len(ed)>0:
+                #    s_offset = st[0][0]
+                #    e_offset = ed[0][1]
 
                     #s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                    predictions.append(text[i][s_offset:e_offset])
+                #    predictions.append(text[i][s_offset:e_offset])
                 else:
                     predictions.append("<NA>")
+
+                print("batch {}: {} questions in {} seconds".format(batch_count, len(sc_s), time.time() - t_start))
 
             batch_count += 1
         em, f1 = score(predictions, dev_y)
@@ -254,6 +268,8 @@ dt = list(map(lambda x,y:[x,y[0]],predictions,dev_y))
 df = pd.DataFrame(dt,columns=["pred","label"])
 
 df.to_excel("../predictions.xlsx", index=False)
+
+print("Total script time: {} seconds".format(time.time() - t_initial))
 
 
 
