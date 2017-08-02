@@ -41,22 +41,23 @@ class DocReaderModel():
         # Run forward
         self.score_s, self.score_e = self.network.start_scores, self.network.end_scores
 
-        t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start")
-        t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end")
+        t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
+        t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end_onehot")
 
         # Compute loss and accuracies
-        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_start, logits=self.score_s)) \
+        with tf.name_scope("loss"):
+            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_start, logits=self.score_s)) \
                + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_end, logits=self.score_e))
 
         self.optimizer = tf.train.AdamOptimizer(opt['learning_rate'])
 
-        gvs = self.optimizer.compute_gradients(loss)
+        gvs = self.optimizer.compute_gradients(self.loss)
         val = self.opt['grad_clipping']
         capped_gvs = [(tf.clip_by_value(grad, -val, val), var) for grad, var in gvs]
 
         self.train_op = self.optimizer.apply_gradients(capped_gvs, global_step=self.global_step)
 
-        loss_summary = tf.summary.scalar("loss", loss)
+        loss_summary = tf.summary.scalar("loss", self.loss)
 
         self.train_summary_op = tf.summary.merge([loss_summary])
         self.test_summary_op = tf.summary.merge([loss_summary])
@@ -67,9 +68,12 @@ class DocReaderModel():
             self.ner:batch[3], self.doc_mask:batch[4], self.q_words:batch[5], self.q_mask:batch[6], self.target_s:batch[7], self.target_e:batch[8]
         }
 
-        ops = [self.global_step, self.train_summary_op, self.train_op]
+        ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e]
 
-        return sess.run(ops, feed_dict=feed_dict)
+        step,sum_op,tr_op, loss,sc_s,sc_e = sess.run(ops, feed_dict=feed_dict)
+        preds, y_true = self.getPredictions(batch, sc_s, sc_e)
+
+        return step, sum_op, tr_op, loss, preds, y_true
 
     def test(self, batch, sess):
         feed_dict = {
@@ -80,26 +84,44 @@ class DocReaderModel():
         ops = [self.score_s, self.score_e]
 
         sc_s, sc_e = sess.run(ops, feed_dict=feed_dict)
+        preds, _ = self.getPredictions(batch, sc_s, sc_e)
+        return preds
 
+
+    def getPredictions(self, batch, sc_s, sc_e,y_s=None,y_e=None):
         # Get argmax text spans
         text = batch[-2]
         spans = batch[-1]
         predictions = []
 
         max_len = self.opt['max_len'] or sc_s.size(1)
+        y_text = []
         for i in range(len(sc_s)):
             scores = np.outer(sc_s[i], sc_e[i])
-            scores = scores.triu().tril(max_len - 1)
+            # scores = scores.triu().tril(max_len - 1)
+            scores = np.tril(np.triu(scores), max_len - 1)
 
             s_idx, e_idx = np.unravel_index(np.argmax(scores), scores.shape)
-            s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-            predictions.append(text[i][s_offset:e_offset])
 
-        return predictions
+            st = [sp for sp in spans[i] if sp[0] < s_idx and sp[1] >= s_idx]
+            ed = [sp for sp in spans[i] if sp[0] <= e_idx and sp[1] > e_idx]
+            if len(st) > 0 and len(ed) > 0:
+                s_offset = st[0][0]
+                e_offset = ed[0][1]
 
-    def predict(self, sc_start, sc_end, text):
-        idx_start = tf.argmax(sc_start, axis=1)
-        idx_end = tf.arg_max(sc_end, axis=1)
+                # s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
+                predictions.append(text[i][s_offset:e_offset])
+            else:
+                predictions.append("<NA>")
+
+            if y_s is not None and y_e is not None:
+                y_text.append(text[i][y_s[i]:y_e[i]])
+
+        return predictions, y_text
+
+
+
+
 
 
 

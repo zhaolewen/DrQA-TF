@@ -6,7 +6,7 @@ import argparse
 from shutil import copyfile
 from datetime import datetime
 from collections import Counter
-
+import requests
 import tensorflow as tf
 import numpy as np
 import chardet
@@ -71,6 +71,10 @@ ch.setFormatter(formatter)
 log.addHandler(fh)
 log.addHandler(ch)
 
+def sendStatElastic(data, endpoint="/neural/testnn"):
+    data['step_time'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    requests.post(endpoint, json=data)
+
 
 def main():
     log.info('[program starts.]')
@@ -87,19 +91,17 @@ def main():
             epoch_0 = 1
 
             best_val_score = 0.0
-            out_dir = opt["model_dir"] + str(time.time()) + "/"
+            run_name=str(time.time())
+            out_dir = opt["model_dir"] + run_name + "/"
 
             train_summary_dir = os.path.join(out_dir, "train")
             train_summary_writer = tf.summary.FileWriter(train_summary_dir, graph)
-
-            test_summary_dir = os.path.join(out_dir, "test")
-            test_summary_writer = tf.summary.FileWriter(test_summary_dir, graph)
 
             saver = tf.train.Saver(tf.global_variables())
             sess.run(tf.global_variables_initializer())
 
             log.info('[Begin training.]')
-
+            step = 0
             for epoch in range(epoch_0, epoch_0 + args.epoches):
                 log.warning('Epoch {}'.format(epoch))
                 # train
@@ -107,11 +109,15 @@ def main():
                 start = datetime.now()
 
                 for i, batch in enumerate(batches):
-                    step, tr_summary, _ = model.train(batch, sess)
+                    step, tr_summary, _, loss, preds, y_true = model.train(batch, sess)
                     train_summary_writer.add_summary(tr_summary, step)
+                    em, f1 = score(preds, y_true)
+                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":step,"precision":em,"f1":f1,"loss":loss})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
+                        log.warning("train EM: {} F1: {}".format(em, f1))
+
                 # eval
                 if epoch % args.eval_per_epoch == 0:
                     save_path = saver.save(sess, out_dir + "model_max.ckpt")
@@ -122,6 +128,8 @@ def main():
                     for batch in batches:
                         predictions.extend(model.test(batch, sess))
                     em, f1 = score(predictions, dev_y)
+                    sendStatElastic(
+                        {"phase": "test", "name": "DrQA", "run_name": run_name, "step": step, "precision": em,"f1": f1})
                     log.warning("dev EM: {} F1: {}".format(em, f1))
 
 

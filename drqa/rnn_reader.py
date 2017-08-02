@@ -83,8 +83,11 @@ class RnnDocReader():
         # Bilinear attention for span start/end
         with tf.variable_scope("span_start"):
             self.start_attn = layers.BilinearSeqAttn(doc_hidden_size, question_hidden_size,doc_hiddens, question_hidden, x1_mask)
+            self.start_scores = self.start_attn.alpha
+
         with tf.variable_scope("span_end"):
             self.end_attn = layers.BilinearSeqAttn(doc_hidden_size, question_hidden_size, doc_hiddens, question_hidden, x1_mask)
+            self.end_scores = self.end_attn.alpha
 
-        self.start_scores = self.start_attn.alpha
-        self.end_scores = self.end_attn.alpha
+
+

@@ -85,7 +85,7 @@ class BilinearSeqAttn():
             Wy = tf.matmul(y, W)
 
             xWy = tf.matmul(x,tf.expand_dims(Wy, 2))
-            self.alpha = tf.squeeze(xWy, 2)
+            self.alpha = tf.squeeze(xWy, 2, name="alpha")
 
             #self.alpha = tf.nn.softmax(xWy)
 
