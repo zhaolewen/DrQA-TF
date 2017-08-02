@@ -27,9 +27,9 @@ class DocReaderModel():
         self.word_feat = tf.placeholder(tf.float32, [None, len_d, feat_n], name="word_features")
         self.pos = tf.placeholder(tf.int32, [None, len_d],name="pos_features")
         self.ner = tf.placeholder(tf.int32, [None, len_d], name="ner_features")
-        self.doc_mask = tf.placeholder(tf.int32, [None, len_d],name="doc_mask")
+        self.doc_mask = tf.placeholder(tf.bool, [None, len_d],name="doc_mask")
         self.q_words = tf.placeholder(tf.int32, [None, len_q],name="question_words")
-        self.q_mask = tf.placeholder(tf.int32, [None, len_q],name="question_mask")
+        self.q_mask = tf.placeholder(tf.bool, [None, len_q],name="question_mask")
 
         self.target_s = tf.placeholder(tf.int32,[None,], name="target_start")
         self.target_e = tf.placeholder(tf.int32,[None,], name="target_end")

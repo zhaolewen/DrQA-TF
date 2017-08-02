@@ -63,13 +63,16 @@ class SeqAttnMatch():
 
             alpha_flat = tf.exp(alpha_flat)
             z = tf.cast(tf.logical_not(y_mask), tf.float32)
+            z = tf.tile(z, [x.get_shape().as_list()[1],1])
             alpha_flat = tf.multiply(alpha_flat, z)
 
             alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
-            alpha = tf.div(alpha_flat, alpha_soft)
+            alpha_soft = tf.expand_dims(alpha_soft, dim=1)
+            alpha_soft = tf.tile(alpha_soft, [1,y.get_shape().as_list()[1]])
+            alpha_flat = tf.div(alpha_flat, alpha_soft)
 
         #alpha_flat = tf.nn.softmax()
-        #alpha = tf.reshape(alpha_flat,[-1, x.get_shape().as_list()[1], y.get_shape().as_list()[1]])
+        alpha = tf.reshape(alpha_flat,[-1, x.get_shape().as_list()[1], y.get_shape().as_list()[1]])
 
         # Take weighted average
         self.matched_seq = tf.matmul(alpha, y)
