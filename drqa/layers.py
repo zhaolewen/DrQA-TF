@@ -62,8 +62,8 @@ class SeqAttnMatch():
             alpha_flat = tf.reshape(scores,[-1, y.get_shape().as_list()[1]])
 
             alpha_flat = tf.exp(alpha_flat)
-            z = tf.zeros(alpha_flat.get_shape())
-            alpha_flat = tf.where(y_mask, alpha_flat, z)
+            z = tf.cast(tf.logical_not(y_mask), tf.float32)
+            alpha_flat = tf.multiply(alpha_flat, z)
 
             alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
             alpha = tf.div(alpha_flat, alpha_soft)
@@ -97,8 +97,8 @@ class BilinearSeqAttn():
 
             xWy = tf.matmul(x,tf.expand_dims(Wy, 2))
             xWy = tf.squeeze(xWy, 2, name="alpha")
-            z = tf.zeros(xWy.get_shape())
-            self.alpha = tf.where(x_mask, z, xWy)
+            z = tf.cast(tf.logical_not(x_mask), dtype=tf.float32)
+            self.alpha = tf.multiply(xWy, z)
 
             #self.alpha = tf.nn.softmax(xWy)
 
