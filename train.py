@@ -163,11 +163,11 @@ def load_data(opt):
     with open(args.data_file, 'rb') as f:
         data = msgpack.load(f, encoding='utf8')
 
-    with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
-        charResult = chardet.detect(f.read())
+    #with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
+    #    charResult = chardet.detect(f.read())
 
-    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv', encoding=charResult['encoding'])
-    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv', encoding=charResult['encoding'])
+    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv')#, encoding=charResult['encoding'])
+    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv')#, encoding=charResult['encoding'])
 
     train = list(zip(
         data['trn_context_ids'],data['trn_context_features'],

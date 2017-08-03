@@ -149,6 +149,31 @@ class DocReaderModel():
 
         return predictions, y_text
 
+    def getPredictions_3(self, batch, sc_s, sc_e,y_s=None,y_e=None):
+        # Get argmax text spans
+        text = batch[-2]
+        spans = batch[-1]
+        predictions = []
+
+        y_text = []
+        for i in range(len(sc_s)):
+            max_len = len(spans[i])
+            s_idx = np.argmax(sc_s[i][0:max_len])
+            e_idx = np.argmax(sc_e[i][0:max_len])
+
+            if s_idx<=e_idx:
+                s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
+                predictions.append(text[i][s_offset:e_offset])
+            else:
+                predictions.append("<NA>")
+
+            if y_s is not None and y_e is not None:
+                y_s_off = spans[i][y_s[i]][0]
+                y_e_off = spans[i][y_e[i]][1]
+                y_text.append(text[i][y_s_off:y_e_off])
+
+        return predictions, y_text
+
 
 
 
