@@ -10,10 +10,10 @@ import requests
 import tensorflow as tf
 import numpy as np
 import chardet
-
 import msgpack
 import pandas as pd
 from drqa.model import DocReaderModel
+#from tensorflow.python import debug as tf_debug
 
 parser = argparse.ArgumentParser(description='Train a Document Reader model.')
 # system
@@ -46,7 +46,7 @@ parser.add_argument('--pos_dim', type=int, default=12, help='the embedding dimen
 parser.add_argument('--ner', type=bool, default=True)
 parser.add_argument('--ner_size', type=int, default=19, help='how many kinds of named entity tags.')
 parser.add_argument('--ner_dim', type=int, default=8, help='the embedding dimension for named entity tags.')
-parser.add_argument('--use_qemb', type=bool, default=True)
+parser.add_argument('--use_qemb', type=bool, default=False)
 parser.add_argument('--concat_rnn_layers', type=bool, default=True)
 parser.add_argument('--dropout_rnn', type=float, default=0.3)
 parser.add_argument('--max_len', type=int, default=15)
@@ -85,6 +85,9 @@ def main():
     graph = tf.Graph()
     with graph.as_default():
         with tf.Session() as sess:
+
+            #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+            #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
 
             log.info('[Loading graph.]')
             model = DocReaderModel(opt, embedding)
