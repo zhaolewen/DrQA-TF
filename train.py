@@ -123,17 +123,17 @@ def main():
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
                         log.warning("train EM: {} F1: {}".format(em, f1))
 
-                # eval
-                if step - test_count* args.eval_per_step > args.eval_per_step:
-                    batches = BatchGen(dev, batch_size=args.batch_size, opt=opt, evaluation=True)
-                    predictions = []
-                    for batch in batches:
-                        predictions.extend(model.test(batch, sess))
-                    em, f1 = score(predictions, dev_y)
-                    sendStatElastic(
-                        {"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
-                    log.warning("dev EM: {} F1: {}".format(em, f1))
-                    test_count += 1
+                    # eval
+                    if step - test_count* args.eval_per_step > args.eval_per_step:
+                        te_batches = BatchGen(dev, batch_size=args.batch_size, opt=opt, evaluation=True)
+                        predictions = []
+                        for batch in te_batches:
+                            predictions.extend(model.test(batch, sess))
+                        em, f1 = score(predictions, dev_y)
+                        sendStatElastic(
+                            {"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
+                        log.warning("dev EM: {} F1: {}".format(em, f1))
+                        test_count += 1
 
                 if epoch % args.eval_per_epoch == 0:
                     save_path = saver.save(sess, out_dir + "model_max.ckpt")
