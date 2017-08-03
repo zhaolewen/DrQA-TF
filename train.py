@@ -106,6 +106,7 @@ def main():
 
             log.info('[Begin training.]')
             step = 0
+            test_count = 0
             for epoch in range(epoch_0, epoch_0 + args.epoches):
                 log.warning('Epoch {}'.format(epoch))
                 # train
@@ -123,7 +124,7 @@ def main():
                         log.warning("train EM: {} F1: {}".format(em, f1))
 
                 # eval
-                if epoch % args.eval_per_step == 0:
+                if step - test_count* args.eval_per_step > args.eval_per_step:
                     batches = BatchGen(dev, batch_size=args.batch_size, opt=opt, evaluation=True)
                     predictions = []
                     for batch in batches:
@@ -132,6 +133,7 @@ def main():
                     sendStatElastic(
                         {"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                     log.warning("dev EM: {} F1: {}".format(em, f1))
+                    test_count += 1
 
                 if epoch % args.eval_per_epoch == 0:
                     save_path = saver.save(sess, out_dir + "model_max.ckpt")
