@@ -71,7 +71,9 @@ class DocReaderModel():
         ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e]
 
         step,sum_op,tr_op, loss,sc_s,sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, y_true = self.getPredictions(batch, sc_s, sc_e,batch[7],batch[8])
+        preds, y_true = self.getPredictions_2(batch, sc_s, sc_e,batch[7],batch[8])
+        print(preds)
+        print(y_true)
 
         return step, sum_op, tr_op, loss, preds, y_true
 
@@ -84,7 +86,7 @@ class DocReaderModel():
         ops = [self.score_s, self.score_e]
 
         sc_s, sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, _ = self.getPredictions(batch, sc_s, sc_e)
+        preds, _ = self.getPredictions_2(batch, sc_s, sc_e)
         return preds
 
 
@@ -117,7 +119,7 @@ class DocReaderModel():
             if y_s is not None and y_e is not None:
                 y_s_off = spans[i][y_s[i]][0]
                 y_e_off = spans[i][y_e[i]][1]
-                y_text.append(text[i][y_s_off:y_e_off])
+                y_text.append([text[i][y_s_off:y_e_off]])
 
         return predictions, y_text
 
@@ -145,7 +147,7 @@ class DocReaderModel():
             if y_s is not None and y_e is not None:
                 y_s_off = spans[i][y_s[i]][0]
                 y_e_off = spans[i][y_e[i]][1]
-                y_text.append(text[i][y_s_off:y_e_off])
+                y_text.append([text[i][y_s_off:y_e_off]])
 
         return predictions, y_text
 
@@ -163,14 +165,14 @@ class DocReaderModel():
 
             if s_idx<=e_idx:
                 s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append(text[i][s_offset:e_offset])
+                predictions.append([text[i][s_offset:e_offset]])
             else:
                 predictions.append("<NA>")
 
             if y_s is not None and y_e is not None:
                 y_s_off = spans[i][y_s[i]][0]
                 y_e_off = spans[i][y_e[i]][1]
-                y_text.append(text[i][y_s_off:y_e_off])
+                y_text.append([text[i][y_s_off:y_e_off]])
 
         return predictions, y_text
 

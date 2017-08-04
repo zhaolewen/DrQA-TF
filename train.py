@@ -72,7 +72,7 @@ ch.setFormatter(formatter)
 log.addHandler(fh)
 log.addHandler(ch)
 
-def sendStatElastic(data, endpoint="/neural/testnn"):
+def sendStatElastic(data, endpoint="http://52.48.27.79:9200/neural/testnn"):
     data['step_time'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     requests.post(endpoint, json=data)
 
@@ -117,7 +117,7 @@ def main():
                     step, tr_summary, _, loss, preds, y_true = model.train(batch, sess)
                     train_summary_writer.add_summary(tr_summary, step)
                     em, f1 = score(preds, y_true)
-                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
+                    #sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
@@ -130,8 +130,7 @@ def main():
                         for batch in te_batches:
                             predictions.extend(model.test(batch, sess))
                         em, f1 = score(predictions, dev_y)
-                        sendStatElastic(
-                            {"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
+                        #sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                         log.warning("dev EM: {} F1: {}".format(em, f1))
                         test_count += 1
 
@@ -274,9 +273,9 @@ def _normalize_answer(s):
 
 
 def _exact_match(pred, answers):
+    pred = _normalize_answer(pred)
     if pred is None or answers is None:
         return False
-    pred = _normalize_answer(pred)
     for a in answers:
         if pred == _normalize_answer(a):
             return True
