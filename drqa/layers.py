@@ -110,40 +110,20 @@ class LinearSeqAttn():
     * o_i = softmax(Wx_i) for x_i in X.
     """
 
-    def __init__(self, input_size,x, x_mask):
+    def __init__(self,x, x_mask):
         """
            x = batch * len * hdim
            x_mask = batch * len
         """
-        with tf.variable_scope("LinearSaqAttn"):
-            W = tf.Variable(tf.truncated_normal([input_size,1]))
-
         x_size = x.get_shape().as_list()
+        with tf.variable_scope("LinearSaqAttn"):
+            W = tf.Variable(tf.truncated_normal([x_size[2],1]))
+
         x_flat = tf.reshape(x, [-1, x_size[2]])
         scores = tf.reshape(tf.matmul(x_flat, W),x_size[0:2])
         scores = tf.matmul(tf.exp(scores),x_mask)
-        x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1),axis=1)
+        x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1), axis=1)
         x_sum = tf.tile(x_sum, [1,x_size[1]])
 
-        scores = tf.div(scores, x_sum)
-
-
-
-
-def uniform_weights(x, x_mask):
-    """Return uniform weights over non-masked input."""
-    alpha = tf.ones(x.get_shape().as_list(), dtype=tf.float32)
-    alpha = tf.multiply(alpha, tf.equal(x_mask, 0.0))
-
-    sums = tf.reduce_sum(alpha, 1)
-    sums = tf.tile(sums, alpha.get_shape().as_list()[1])
-    alpha = tf.div(alpha, sums)
-    return alpha
-
-
-def weighted_avg(x, weights):
-    """x = batch * len * d
-    weights = batch * len
-    """
-    wx = tf.matmul(tf.expand_dims(weights, 1), x)
-    return tf.squeeze(wx, 1)
+        scores = tf.expand_dims(tf.div(scores, x_sum), axis=1)
+        self.weighted = tf.squeeze(tf.matmul(scores, x), axis=1)

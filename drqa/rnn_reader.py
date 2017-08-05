@@ -71,7 +71,10 @@ class RnnDocReader():
             #q_merge_weights = layers.uniform_weights(question_hiddens, x2_mask)
             #question_hidden = layers.weighted_avg(question_hiddens, q_merge_weights)
 
-            question_hidden = tf.reduce_mean(question_hiddens, 1)
+            q_weight_layer = layers.LinearSeqAttn(question_hiddens, x2_mask)
+
+            #question_hidden = tf.reduce_mean(question_hiddens, 1)
+            question_hidden = q_weight_layer.weighted
 
         # Output sizes of rnn encoders
         doc_hidden_size = 2 * opt['hidden_size']
