@@ -122,8 +122,8 @@ class LinearSeqAttn():
         x_flat = tf.reshape(x, [-1, x_size[2]])
         scores = tf.reshape(tf.matmul(x_flat, W),[-1,x_size[1]])
         x_mask = tf.cast(tf.logical_not(x_mask), tf.float32)
-        
-        scores = tf.matmul(tf.exp(scores),x_mask)
+
+        scores = tf.multiply(tf.exp(scores),x_mask)
         x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1), axis=1)
         x_sum = tf.tile(x_sum, [1,x_size[1]])
 
