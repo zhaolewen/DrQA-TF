@@ -44,8 +44,8 @@ class DocReaderModel():
         with tf.name_scope("targets"):
             t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
             t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end_onehot")
-            t_start = tf.add(tf.scalar_mul(2.0, t_start),-1.0,name="t_start")
-            t_end = tf.add(tf.scalar_mul(2.0, t_end), -1.0,name="t_end")
+            # t_start = tf.add(tf.scalar_mul(2.0, t_start),-1.0,name="t_start")
+            # t_end = tf.add(tf.scalar_mul(2.0, t_end), -1.0,name="t_end")
 
         # Compute loss and accuracies
         with tf.name_scope("loss"):
@@ -186,11 +186,12 @@ class DocReaderModel():
         predictions = []
 
         y_text = []
+        max_len = self.opt["max_len"]
         for i in range(len(sc_s)):
-            max_len = len(spans[i])
+            txt_len = len(spans[i])
 
-            sc_s_i = np.exp(sc_s[i][0:max_len])
-            sc_e_i = np.exp(sc_e[i][0:max_len])
+            sc_s_i = np.exp(sc_s[i][0:txt_len])
+            sc_e_i = np.exp(sc_e[i][0:txt_len])
             sc_s_i = sc_s_i/np.sum(sc_s_i)
             sc_e_i = sc_e_i/np.sum(sc_e_i)
 
