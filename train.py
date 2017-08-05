@@ -23,7 +23,7 @@ parser.add_argument('--data_file', default='./SQuAD/data.msgpack',help='path to 
 parser.add_argument('--model_dir', default='./summary/',help='path to store saved models.')
 parser.add_argument('--save_last_only', action='store_true',help='only save the final models.')
 parser.add_argument('--eval_per_epoch', type=int, default=1,help='perform evaluation per x epoches.')
-parser.add_argument('--eval_per_step', type=int, default=100,help='perform evaluation per x step.')
+parser.add_argument('--eval_per_step', type=int, default=500,help='perform evaluation per x step.')
 parser.add_argument('--squad_dir', default='./SQuAD/',help='directory for SQuAD files')
 # training
 parser.add_argument('-e', '--epoches', type=int, default=20)
@@ -94,7 +94,6 @@ def main():
             log.info('[Graph loaded.]')
             epoch_0 = 1
 
-            best_val_score = 0.0
             run_name=str(time.time())
             out_dir = opt["model_dir"] + run_name + "/"
 
@@ -117,11 +116,11 @@ def main():
                     step, tr_summary, _, loss, preds, y_true = model.train(batch, sess)
                     train_summary_writer.add_summary(tr_summary, step)
                     em, f1 = score(preds, y_true)
-                    #sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
+                    log.warning("train EM: {} F1: {}".format(em, f1))
+                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
-                        log.warning("train EM: {} F1: {}".format(em, f1))
 
                     # eval
                     if step - test_count* args.eval_per_step > args.eval_per_step:
@@ -130,7 +129,7 @@ def main():
                         for batch in te_batches:
                             predictions.extend(model.test(batch, sess))
                         em, f1 = score(predictions, dev_y)
-                        #sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
+                        sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                         log.warning("dev EM: {} F1: {}".format(em, f1))
                         test_count += 1
 
@@ -162,11 +161,11 @@ def load_data(opt):
     with open(args.data_file, 'rb') as f:
         data = msgpack.load(f, encoding='utf8')
 
-    #with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
-    #    charResult = chardet.detect(f.read())
+    with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
+        charResult = chardet.detect(f.read())
 
-    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv')#, encoding=charResult['encoding'])
-    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv')#, encoding=charResult['encoding'])
+    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv', encoding=charResult['encoding'])
+    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv', encoding=charResult['encoding'])
 
     train = list(zip(
         data['trn_context_ids'],data['trn_context_features'],

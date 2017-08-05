@@ -41,8 +41,11 @@ class DocReaderModel():
         # Run forward
         self.score_s, self.score_e = self.network.start_scores, self.network.end_scores
 
-        t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
-        t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end_onehot")
+        with tf.name_scope("targets"):
+            t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
+            t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end_onehot")
+            t_start = tf.add(tf.scalar_mul(2.0, t_start),-1.0,name="t_start")
+            t_end = tf.add(tf.scalar_mul(2.0, t_end), -1.0,name="t_end")
 
         # Compute loss and accuracies
         with tf.name_scope("loss"):
@@ -71,7 +74,7 @@ class DocReaderModel():
         ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e]
 
         step,sum_op,tr_op, loss,sc_s,sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, y_true = self.getPredictions_2(batch, sc_s, sc_e,batch[7],batch[8])
+        preds, y_true = self.getPredictions_3(batch, sc_s, sc_e,batch[7],batch[8])
         print(preds)
         print(y_true)
 
@@ -86,7 +89,7 @@ class DocReaderModel():
         ops = [self.score_s, self.score_e]
 
         sc_s, sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, _ = self.getPredictions_2(batch, sc_s, sc_e)
+        preds, _ = self.getPredictions_3(batch, sc_s, sc_e)
         return preds
 
 
@@ -165,7 +168,7 @@ class DocReaderModel():
 
             if s_idx<=e_idx:
                 s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append([text[i][s_offset:e_offset]])
+                predictions.append(text[i][s_offset:e_offset])
             else:
                 predictions.append("<NA>")
 
