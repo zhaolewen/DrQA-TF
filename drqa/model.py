@@ -74,9 +74,9 @@ class DocReaderModel():
         ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e]
 
         step,sum_op,tr_op, loss,sc_s,sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, y_true = self.getPredictions_3(batch, sc_s, sc_e,batch[7],batch[8])
-        print(preds)
-        print(y_true)
+        preds, y_true = self.getPredictions_4(batch, sc_s, sc_e,batch[7],batch[8])
+        #print(preds)
+        #print(y_true)
 
         return step, sum_op, tr_op, loss, preds, y_true
 
@@ -89,7 +89,7 @@ class DocReaderModel():
         ops = [self.score_s, self.score_e]
 
         sc_s, sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, _ = self.getPredictions_3(batch, sc_s, sc_e)
+        preds, _ = self.getPredictions_4(batch, sc_s, sc_e)
         return preds
 
 
