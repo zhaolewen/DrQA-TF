@@ -105,7 +105,29 @@ class BilinearSeqAttn():
             z = tf.cast(tf.logical_not(x_mask), dtype=tf.float32)
             self.alpha = tf.multiply(xWy, z)
 
-            #self.alpha = tf.nn.softmax(xWy)
+class LinearSeqAttn():
+    """Self attention over a sequence:
+    * o_i = softmax(Wx_i) for x_i in X.
+    """
+
+    def __init__(self, input_size,x, x_mask):
+        """
+           x = batch * len * hdim
+           x_mask = batch * len
+        """
+        with tf.variable_scope("LinearSaqAttn"):
+            W = tf.Variable(tf.truncated_normal([input_size,1]))
+
+        x_size = x.get_shape().as_list()
+        x_flat = tf.reshape(x, [-1, x_size[2]])
+        scores = tf.reshape(tf.matmul(x_flat, W),x_size[0:2])
+        scores = tf.matmul(tf.exp(scores),x_mask)
+        x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1),axis=1)
+        x_sum = tf.tile(x_sum, [1,x_size[1]])
+
+        scores = tf.div(scores, x_sum)
+
+
 
 
 def uniform_weights(x, x_mask):

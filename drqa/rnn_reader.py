@@ -18,7 +18,7 @@ class RnnDocReader():
         # Word embeddings
         if opt['pretrained_words']:
             assert embedding is not None
-            self.embedding = tf.Variable(embedding, dtype=tf.float32, name="word_embed")
+            self.embedding = tf.constant(embedding, dtype=tf.float32, name="word_embed")
         else:
             self.embedding = tf.Variable(tf.random_normal((opt['vocab_size'], opt['embedding_dim']), 0.0, 1.0))
 
