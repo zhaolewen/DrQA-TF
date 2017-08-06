@@ -52,7 +52,8 @@ class DocReaderModel():
             self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_start, logits=self.score_s)) \
                + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_end, logits=self.score_e))
 
-        self.optimizer = tf.train.AdamOptimizer(opt['learning_rate'])
+        self.learning_rate = tf.train.exponential_decay(opt['learning_rate'], self.global_step,1000, opt['learning_decay'], staircase=True)
+        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
         gvs = self.optimizer.compute_gradients(self.loss)
         val = self.opt['grad_clipping']
@@ -71,14 +72,14 @@ class DocReaderModel():
             self.ner:batch[3], self.doc_mask:batch[4], self.q_words:batch[5], self.q_mask:batch[6], self.target_s:batch[7], self.target_e:batch[8]
         }
 
-        ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e]
+        ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e, self.learning_rate]
 
-        step,sum_op,tr_op, loss,sc_s,sc_e = sess.run(ops, feed_dict=feed_dict)
+        step,sum_op,tr_op, loss,sc_s,sc_e, rate = sess.run(ops, feed_dict=feed_dict)
         preds, y_true = self.getPredictions_4(batch, sc_s, sc_e,batch[7],batch[8])
         #print(preds)
         #print(y_true)
 
-        return step, sum_op, tr_op, loss, preds, y_true
+        return step, sum_op, tr_op, loss, preds, y_true, rate
 
     def test(self, batch, sess):
         feed_dict = {

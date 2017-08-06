@@ -28,11 +28,10 @@ parser.add_argument('--squad_dir', default='./SQuAD/',help='directory for SQuAD 
 # training
 parser.add_argument('-e', '--epoches', type=int, default=20)
 parser.add_argument('-bs', '--batch_size', type=int, default=32)
-parser.add_argument('-rs', '--resume', default='',help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
-parser.add_argument('-ro', '--resume_options', action='store_true', help='use previous model options, ignore the cli and defaults.')
-parser.add_argument('-rlr', '--reduce_lr', type=float, default=0., help='reduce initial (resumed) learning rate by this factor.')
+parser.add_argument('-rs', '--resume', default=None,help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
 parser.add_argument('-gc', '--grad_clipping', type=float, default=10)
-parser.add_argument('-lr', '--learning_rate', type=float, default=0.1)
+parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
+parser.add_argument('-ld', '--learning_decay', type=float, default=0.96, help="decay rate of learning rate for every 1000 steps")
 parser.add_argument('-tp', '--tune_partial', type=int, default=1000,help='finetune top-x embeddings.')
 parser.add_argument('--fix_embeddings', action='store_true',help='if true, `tune_partial` will be ignored.')
 # model
@@ -85,10 +84,6 @@ def main():
     graph = tf.Graph()
     with graph.as_default():
         with tf.Session() as sess:
-
-            #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-            #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
-
             log.info('[Loading graph.]')
             model = DocReaderModel(opt, embedding)
             log.info('[Graph loaded.]')
@@ -113,11 +108,11 @@ def main():
                 start = datetime.now()
 
                 for i, batch in enumerate(batches):
-                    step, tr_summary, _, loss, preds, y_true = model.train(batch, sess)
+                    step, tr_summary, _, loss, preds, y_true, learn_rate = model.train(batch, sess)
                     train_summary_writer.add_summary(tr_summary, step)
                     em, f1 = score(preds, y_true)
                     log.warning("train EM: {} F1: {}".format(em, f1))
-                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch})
+                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch, "learning_rate":float(learn_rate)})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
@@ -161,11 +156,11 @@ def load_data(opt):
     with open(args.data_file, 'rb') as f:
         data = msgpack.load(f, encoding='utf8')
 
-    #with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
-    #    charResult = chardet.detect(f.read())
+    with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
+        charResult = chardet.detect(f.read())
 
-    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv')#, encoding=charResult['encoding'])
-    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv')#, encoding=charResult['encoding'])
+    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv', encoding=charResult['encoding'])
+    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv', encoding=charResult['encoding'])
 
     train = list(zip(
         data['trn_context_ids'],data['trn_context_features'],
