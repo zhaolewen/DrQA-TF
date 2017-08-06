@@ -81,22 +81,23 @@ def main():
     train, dev, dev_y, embedding, opt = load_data(vars(args))
     log.info('[Data loaded.]')
 
+    run_name = str(time.time())
+    out_dir = opt["model_dir"] + run_name + "/"
+
     graph = tf.Graph()
     with graph.as_default():
-        with tf.Session() as sess:
-            log.info('[Loading graph.]')
-            model = DocReaderModel(opt, embedding)
-            log.info('[Graph loaded.]')
+        log.info('[Loading graph.]')
+        model = DocReaderModel(opt, embedding)
+        log.info('[Graph loaded.]')
+
+        sv = tf.train.Supervisor(logdir=opt["model_dir"])
+
+        with sv.managed_session() as sess:
+
             epoch_0 = 1
 
-            run_name=str(time.time())
-            out_dir = opt["model_dir"] + run_name + "/"
-
-            train_summary_dir = os.path.join(out_dir, "train")
-            train_summary_writer = tf.summary.FileWriter(train_summary_dir, graph)
-
-            saver = tf.train.Saver(tf.global_variables())
-            sess.run(tf.global_variables_initializer())
+            #saver = tf.train.Saver(tf.global_variables())
+            #sess.run(tf.global_variables_initializer())
 
             log.info('[Begin training.]')
             step = 0
@@ -109,7 +110,7 @@ def main():
 
                 for i, batch in enumerate(batches):
                     step, tr_summary, _, loss, preds, y_true, learn_rate = model.train(batch, sess)
-                    train_summary_writer.add_summary(tr_summary, step)
+
                     em, f1 = score(preds, y_true)
                     log.warning("train EM: {} F1: {}".format(em, f1))
                     sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch, "learning_rate":float(learn_rate)})
@@ -128,9 +129,9 @@ def main():
                         log.warning("dev EM: {} F1: {}".format(em, f1))
                         test_count += 1
 
-                if epoch % args.eval_per_epoch == 0:
-                    save_path = saver.save(sess, out_dir + "model_max.ckpt")
-                    print("max model saved in file: %s" % save_path)
+                #if epoch % args.eval_per_epoch == 0:
+                #    save_path = saver.save(sess, out_dir + "model_max.ckpt")
+                #    print("max model saved in file: %s" % save_path)
 
 
 def get_max_len(dt1, dt2=None):
