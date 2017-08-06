@@ -110,10 +110,11 @@ def main():
                 start = datetime.now()
 
                 for i, batch in enumerate(batches):
+                    t_step = time.time()
                     step, tr_summary, _, loss, preds, y_true, learn_rate = model.train(batch, sess)
 
                     em, f1 = score(preds, y_true)
-                    log.warning("train EM: {} F1: {}".format(em, f1))
+                    log.warning("train EM: {} F1: {} in {} seconds".format(em, f1,time.time()-t_step))
                     sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch, "learning_rate":float(learn_rate)})
 
                     if i % args.log_per_updates == 0:
