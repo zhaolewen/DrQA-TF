@@ -31,7 +31,7 @@ parser.add_argument('-bs', '--batch_size', type=int, default=32)
 parser.add_argument('-rs', '--resume', default=None,help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
 parser.add_argument('-gc', '--grad_clipping', type=float, default=10)
 parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
-parser.add_argument('-lr', '--decay_step', type=int, default=300)
+parser.add_argument('-ds', '--decay_step', type=int, default=300)
 parser.add_argument('-ld', '--learning_decay', type=float, default=0.96, help="decay rate of learning rate for every decay_step")
 parser.add_argument('-tp', '--tune_partial', type=int, default=1000,help='finetune top-x embeddings.')
 parser.add_argument('--fix_embeddings', action='store_true',help='if true, `tune_partial` will be ignored.')
@@ -158,11 +158,11 @@ def load_data(opt):
     with open(args.data_file, 'rb') as f:
         data = msgpack.load(f, encoding='utf8')
 
-    with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
-        charResult = chardet.detect(f.read())
+    #with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
+    #    charResult = chardet.detect(f.read())
 
-    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv', encoding=charResult['encoding'])
-    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv', encoding=charResult['encoding'])
+    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv')#, encoding=charResult['encoding'])
+    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv')#, encoding=charResult['encoding'])
 
     train = list(zip(
         data['trn_context_ids'],data['trn_context_features'],
