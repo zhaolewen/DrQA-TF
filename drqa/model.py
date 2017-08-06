@@ -75,7 +75,7 @@ class DocReaderModel():
         ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e, self.learning_rate]
 
         step,sum_op,tr_op, loss,sc_s,sc_e, rate = sess.run(ops, feed_dict=feed_dict)
-        preds, y_true = self.getPredictions_4(batch, sc_s, sc_e,batch[7],batch[8])
+        preds, y_true = self.getPredictions(batch, sc_s, sc_e,batch[7],batch[8])
         #print(preds)
         #print(y_true)
 
@@ -90,97 +90,10 @@ class DocReaderModel():
         ops = [self.score_s, self.score_e]
 
         sc_s, sc_e = sess.run(ops, feed_dict=feed_dict)
-        preds, _ = self.getPredictions_4(batch, sc_s, sc_e)
+        preds, _ = self.getPredictions(batch, sc_s, sc_e)
         return preds
 
-
     def getPredictions(self, batch, sc_s, sc_e,y_s=None,y_e=None):
-        # Get argmax text spans
-        text = batch[-2]
-        spans = batch[-1]
-        predictions = []
-
-        max_len = self.opt['max_len'] or sc_s.size(1)
-        y_text = []
-        for i in range(len(sc_s)):
-            scores = np.outer(sc_s[i], sc_e[i])
-            # scores = scores.triu().tril(max_len - 1)
-            scores = np.tril(np.triu(scores), max_len - 1)
-
-            s_idx, e_idx = np.unravel_index(np.argmax(scores), scores.shape)
-
-            st = [sp for sp in spans[i] if sp[0] < s_idx and sp[1] >= s_idx]
-            ed = [sp for sp in spans[i] if sp[0] <= e_idx and sp[1] > e_idx]
-            if len(st) > 0 and len(ed) > 0:
-                s_offset = st[0][0]
-                e_offset = ed[0][1]
-
-                # s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append(text[i][s_offset:e_offset])
-            else:
-                predictions.append("<NA>")
-
-            if y_s is not None and y_e is not None:
-                y_s_off = spans[i][y_s[i]][0]
-                y_e_off = spans[i][y_e[i]][1]
-                y_text.append([text[i][y_s_off:y_e_off]])
-
-        return predictions, y_text
-
-    def getPredictions_2(self, batch, sc_s, sc_e,y_s=None,y_e=None):
-        # Get argmax text spans
-        text = batch[-2]
-        spans = batch[-1]
-        predictions = []
-
-        max_len = self.opt['max_len'] or sc_s.size(1)
-        y_text = []
-        for i in range(len(sc_s)):
-            scores = np.outer(sc_s[i], sc_e[i])
-            # scores = scores.triu().tril(max_len - 1)
-            scores = np.tril(np.triu(scores), max_len - 1)
-
-            s_idx, e_idx = np.unravel_index(np.argmax(scores), scores.shape)
-
-            if s_idx < len(spans[i]) and e_idx < len(spans[i]) and s_idx<=e_idx:
-                s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append(text[i][s_offset:e_offset])
-            else:
-                predictions.append("<NA>")
-
-            if y_s is not None and y_e is not None:
-                y_s_off = spans[i][y_s[i]][0]
-                y_e_off = spans[i][y_e[i]][1]
-                y_text.append([text[i][y_s_off:y_e_off]])
-
-        return predictions, y_text
-
-    def getPredictions_3(self, batch, sc_s, sc_e,y_s=None,y_e=None):
-        # Get argmax text spans
-        text = batch[-2]
-        spans = batch[-1]
-        predictions = []
-
-        y_text = []
-        for i in range(len(sc_s)):
-            max_len = len(spans[i])
-            s_idx = np.argmax(sc_s[i][0:max_len])
-            e_idx = np.argmax(sc_e[i][0:max_len])
-
-            if s_idx<=e_idx:
-                s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append(text[i][s_offset:e_offset])
-            else:
-                predictions.append("<NA>")
-
-            if y_s is not None and y_e is not None:
-                y_s_off = spans[i][y_s[i]][0]
-                y_e_off = spans[i][y_e[i]][1]
-                y_text.append([text[i][y_s_off:y_e_off]])
-
-        return predictions, y_text
-
-    def getPredictions_4(self, batch, sc_s, sc_e,y_s=None,y_e=None):
         # Get argmax text spans
         text = batch[-2]
         spans = batch[-1]
@@ -191,22 +104,19 @@ class DocReaderModel():
         for i in range(len(sc_s)):
             txt_len = len(spans[i])
 
+            # softmax
             sc_s_i = np.exp(sc_s[i][0:txt_len])
             sc_e_i = np.exp(sc_e[i][0:txt_len])
             sc_s_i = sc_s_i/np.sum(sc_s_i)
             sc_e_i = sc_e_i/np.sum(sc_e_i)
 
             scores = np.outer(sc_s_i, sc_e_i)
-            # scores = scores.triu().tril(max_len - 1)
             scores = np.tril(np.triu(scores), max_len - 1)
 
             s_idx, e_idx = np.unravel_index(np.argmax(scores), scores.shape)
 
-            if s_idx < len(spans[i]) and e_idx < len(spans[i]) and s_idx <= e_idx:
-                s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
-                predictions.append(text[i][s_offset:e_offset])
-            else:
-                predictions.append("<NA>")
+            s_offset, e_offset = spans[i][s_idx][0], spans[i][e_idx][1]
+            predictions.append(text[i][s_offset:e_offset])
 
             if y_s is not None and y_e is not None:
                 y_s_off = spans[i][y_s[i]][0]
