@@ -61,25 +61,20 @@ class DocReaderModel():
 
         self.train_op = self.optimizer.apply_gradients(capped_gvs, global_step=self.global_step)
 
-        loss_summary = tf.summary.scalar("loss", self.loss)
-
-        self.train_summary_op = tf.summary.merge([loss_summary])
-        self.test_summary_op = tf.summary.merge([loss_summary])
-
     def train(self, batch, sess):
         feed_dict = {
             self.doc_words:batch[0], self.word_feat:batch[1], self.pos:batch[2],
             self.ner:batch[3], self.doc_mask:batch[4], self.q_words:batch[5], self.q_mask:batch[6], self.target_s:batch[7], self.target_e:batch[8]
         }
 
-        ops = [self.global_step, self.train_summary_op, self.train_op, self.loss, self.score_s, self.score_e, self.learning_rate]
+        ops = [self.global_step, self.train_op, self.loss, self.score_s, self.score_e, self.learning_rate]
 
-        step,sum_op,tr_op, loss,sc_s,sc_e, rate = sess.run(ops, feed_dict=feed_dict)
+        step,tr_op, loss,sc_s,sc_e, rate = sess.run(ops, feed_dict=feed_dict)
         preds, y_true = self.getPredictions(batch, sc_s, sc_e,batch[7],batch[8])
         #print(preds)
         #print(y_true)
 
-        return step, sum_op, tr_op, loss, preds, y_true, rate
+        return step, tr_op, loss, preds, y_true, rate
 
     def test(self, batch, sess):
         feed_dict = {

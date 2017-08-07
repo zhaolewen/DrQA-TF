@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 class StackedBRNN():
-    def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.1):
+    def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.7):
 
         with tf.variable_scope("forward"):
             fw_cell = tf.nn.rnn_cell.LSTMCell(num_units=hidden_size, state_is_tuple=True)

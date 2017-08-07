@@ -23,10 +23,10 @@ parser.add_argument('--data_file', default='./SQuAD/data.msgpack',help='path to 
 parser.add_argument('--model_dir', default='./summary/',help='path to store saved models.')
 parser.add_argument('--save_last_only', action='store_true',help='only save the final models.')
 parser.add_argument('--eval_per_epoch', type=int, default=1,help='perform evaluation per x epoches.')
-parser.add_argument('--eval_per_step', type=int, default=500,help='perform evaluation per x step.')
+parser.add_argument('--eval_per_step', type=int, default=2000,help='perform evaluation per x step.')
 parser.add_argument('--squad_dir', default='./SQuAD/',help='directory for SQuAD files')
 # training
-parser.add_argument('-e', '--epoches', type=int, default=20)
+parser.add_argument('-e', '--epoches', type=int, default=4)
 parser.add_argument('-bs', '--batch_size', type=int, default=32)
 parser.add_argument('-rs', '--resume', default=None,help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
 parser.add_argument('-gc', '--grad_clipping', type=float, default=10)
@@ -90,32 +90,34 @@ def main():
         log.info('[Loading graph.]')
         model = DocReaderModel(opt, embedding)
         log.info('[Graph loaded.]')
+        #saver = tf.train.Saver(tf.global_variables())
 
-        sv = tf.train.Supervisor(logdir=opt["model_dir"])
+        sv = tf.train.Supervisor(logdir=opt["model_dir"], save_model_secs=100)
 
         with sv.managed_session() as sess:
-
-            epoch_0 = 1
-
-            #saver = tf.train.Saver(tf.global_variables())
-            #sess.run(tf.global_variables_initializer())
 
             log.info('[Begin training.]')
             step = 0
             test_count = 0
-            for epoch in range(epoch_0, epoch_0 + args.epoches):
+            epoch = 0
+            while not sv.should_stop() and epoch<args.epoches:
+            #for epoch in range(epoch_0, epoch_0 + args.epoches):
                 log.warning('Epoch {}'.format(epoch))
                 # train
                 batches = BatchGen(train, batch_size=args.batch_size, opt=opt)
                 start = datetime.now()
 
                 for i, batch in enumerate(batches):
+                    if sv.should_stop():
+                        log.warning("Supervisor: should_stop")
+                        break
+
                     t_step = time.time()
-                    step, tr_summary, _, loss, preds, y_true, learn_rate = model.train(batch, sess)
+                    step, _, loss, preds, y_true, learn_rate = model.train(batch, sess)
 
                     em, f1 = score(preds, y_true)
                     log.warning("train EM: {} F1: {} in {} seconds".format(em, f1,time.time()-t_step))
-                    sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch, "learning_rate":float(learn_rate)})
+                    #sendStatElastic({"phase":"train","name":"DrQA","run_name":run_name,"step":int(step),"precision":float(em),"f1":float(f1),"loss":float(loss),"epoch":epoch, "learning_rate":float(learn_rate)})
 
                     if i % args.log_per_updates == 0:
                         log.info('updates[{}]  remaining[{}]'.format(step,str((datetime.now() - start) / (i + 1) * (len(batches) - i - 1)).split('.')[0]))
@@ -127,13 +129,14 @@ def main():
                         for batch in te_batches:
                             predictions.extend(model.test(batch, sess))
                         em, f1 = score(predictions, dev_y)
-                        sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
+                        #sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                         log.warning("dev EM: {} F1: {}".format(em, f1))
                         test_count += 1
 
                 #if epoch % args.eval_per_epoch == 0:
                 #    save_path = saver.save(sess, out_dir + "model_max.ckpt")
                 #    print("max model saved in file: %s" % save_path)
+                epoch += 1
 
 
 def get_max_len(dt1, dt2=None):
@@ -159,11 +162,11 @@ def load_data(opt):
     with open(args.data_file, 'rb') as f:
         data = msgpack.load(f, encoding='utf8')
 
-    #with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
-    #    charResult = chardet.detect(f.read())
+    with open(opt["squad_dir"]+ 'train.csv', 'rb') as f:
+        charResult = chardet.detect(f.read())
 
-    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv')#, encoding=charResult['encoding'])
-    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv')#, encoding=charResult['encoding'])
+    train_orig = pd.read_csv(opt["squad_dir"]+ 'train.csv', encoding=charResult['encoding'])
+    dev_orig = pd.read_csv(opt["squad_dir"]+'dev.csv', encoding=charResult['encoding'])
 
     train = list(zip(
         data['trn_context_ids'],data['trn_context_features'],
