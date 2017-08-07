@@ -1,21 +1,20 @@
 import tensorflow as tf
 
+def lstm_cell(hidden, drop_keep):
+    basic = tf.nn.rnn_cell.LSTMCell(num_units=hidden, state_is_tuple=True)
+    cell = tf.nn.rnn_cell.DropoutWrapper(cell=basic, output_keep_prob=drop_keep)
+    return cell
+
 class StackedBRNN():
     def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.7):
 
         with tf.variable_scope("forward"):
-            fw_cell = tf.nn.rnn_cell.LSTMCell(num_units=hidden_size, state_is_tuple=True)
-
-            fw_cell = tf.nn.rnn_cell.DropoutWrapper(fw_cell, output_keep_prob=dropout_rate)
-            fw_cell = tf.nn.rnn_cell.MultiRNNCell([fw_cell] * num_layers, state_is_tuple=True)
-            print(fw_cell.state_size)
+            fw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell(hidden_size, dropout_rate) for _ in range(num_layers)], state_is_tuple=True)
+            # print(fw_cell.state_size)
 
         with tf.variable_scope("backward"):
-            bw_cell = tf.nn.rnn_cell.LSTMCell(num_units=hidden_size, state_is_tuple=True)
-
-            bw_cell = tf.nn.rnn_cell.DropoutWrapper(bw_cell, output_keep_prob=dropout_rate)
-            bw_cell = tf.nn.rnn_cell.MultiRNNCell([bw_cell] * num_layers, state_is_tuple=True)
-            print(bw_cell.state_size)
+            bw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell(hidden_size, dropout_rate) for _ in range(num_layers)], state_is_tuple=True)
+            # print(bw_cell.state_size)
 
         with tf.name_scope("doc_length"):
             words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
