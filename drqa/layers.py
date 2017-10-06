@@ -9,7 +9,9 @@ class StackedBRNN():
     def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.7):
 
         outputs = []
+        last_output = input_data
         for k in range(num_layers):
+
             with tf.variable_scope("BiLSTM_"+str(k)):
                 with tf.variable_scope("forward"):
                     fw_cell = lstm_cell(hidden_size, dropout_rate)
@@ -22,8 +24,10 @@ class StackedBRNN():
                 with tf.name_scope("doc_length"):
                     words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
                     self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
-                output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, input_data, dtype=tf.float32, sequence_length=self.length)
+
+                output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, last_output, dtype=tf.float32, sequence_length=self.length)
                 #print(output)
+                last_output = tf.concat([output[0],output[1]], axis=2)
 
             outputs += [output[0],output[1]]
 

@@ -1,7 +1,7 @@
 summary/
 predictions.xlsx
 SQuAD/
-./output.log
+/output.log
 glove/
 checkpoints/
 __pycache__/
