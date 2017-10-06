@@ -10,17 +10,18 @@ import collections
 import logging
 
 parser = argparse.ArgumentParser(description='Preprocessing data files, about 10 minitues to run.')
-parser.add_argument('--wv_file', default='C:\\Data\\glove.840B.300d.txt',help='path to word vector file.')
+parser.add_argument('--wv_file', default='glove/glove.840B.300d.txt',help='path to word vector file.')
 parser.add_argument('--wv_dim', type=int, default=300,help='word vector dimension.')
 parser.add_argument('--wv_cased', type=bool, default=True,help='treat the words as cased or not.')
 parser.add_argument('--sort_all', action='store_true', help='sort the vocabulary by frequencies of all words. Otherwise consider question words first.')
 parser.add_argument('--sample_size', type=int, default=0, help='size of sample data (for debugging).')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size for multiprocess tokenizing and tagging.')
+parser.add_argument('--squad_folder', default="./SQuAD/", help='location of SQuAD folder')
 
 args = parser.parse_args()
 
-trn_file = '../data/SQuAD/train-v1.1.json'
-dev_file = '../data/SQuAD/dev-v1.1.json'
+trn_file = args.squad_folder+'train-v1.1.json'
+dev_file = args.squad_folder+'dev-v1.1.json'
 wv_file = args.wv_file
 wv_dim = args.wv_dim
 
@@ -236,13 +237,13 @@ log.info('got embedding matrix.')
 
 
 
-train.to_csv('../data/SQuAD/train.csv', index=False, encoding="utf-8")
-dev.to_csv('../data/SQuAD/dev.csv', index=False, encoding="utf-8")
+train.to_csv(args.squad_folder+'train.csv', index=False, encoding="utf-8")
+dev.to_csv(args.squad_folder+'dev.csv', index=False, encoding="utf-8")
 meta = {
     'vocab': vocab,
     'embedding': embedding.tolist()
 }
-with open('../data/SQuAD/meta.msgpack', 'wb') as f:
+with open(args.squad_folder+'meta.msgpack', 'wb') as f:
     msgpack.dump(meta, f)
 result = {
     'trn_question_ids': question_ids[:len(train)],
@@ -260,7 +261,7 @@ result = {
     'trn_context_spans': context_token_span[:len(train)],
     'dev_context_spans': context_token_span[len(train):]
 }
-with open('../data/SQuAD/data.msgpack', 'wb') as f:
+with open(args.squad_folder+'data.msgpack', 'wb') as f:
     msgpack.dump(result, f)
 if args.sample_size:
     sample_size = args.sample_size
@@ -280,6 +281,6 @@ if args.sample_size:
         'trn_context_spans': result['trn_context_spans'][:sample_size],
         'dev_context_spans': result['dev_context_spans'][:sample_size]
     }
-    with open('../data/SQuAD/sample.msgpack', 'wb') as f:
+    with open(args.squad_folder+'sample.msgpack', 'wb') as f:
         msgpack.dump(sample, f)
 log.info('saved to disk.')

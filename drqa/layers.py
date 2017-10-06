@@ -8,21 +8,26 @@ def lstm_cell(hidden, drop_keep):
 class StackedBRNN():
     def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.7):
 
-        with tf.variable_scope("forward"):
-            fw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell(hidden_size, dropout_rate) for _ in range(num_layers)], state_is_tuple=True)
-            # print(fw_cell.state_size)
+        outputs = []
+        for k in range(num_layers):
+            with tf.variable_scope("BiLSTM_"+str(k)):
+                with tf.variable_scope("forward"):
+                    fw_cell = lstm_cell(hidden_size, dropout_rate)
+                    # print(fw_cell.state_size)
 
-        with tf.variable_scope("backward"):
-            bw_cell = tf.nn.rnn_cell.MultiRNNCell([lstm_cell(hidden_size, dropout_rate) for _ in range(num_layers)], state_is_tuple=True)
-            # print(bw_cell.state_size)
+                with tf.variable_scope("backward"):
+                    bw_cell = lstm_cell(hidden_size, dropout_rate)
+                    # print(bw_cell.state_size)
 
-        with tf.name_scope("doc_length"):
-            words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
-            self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
-        output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, input_data, dtype=tf.float32, sequence_length=self.length)
-        print(output)
+                with tf.name_scope("doc_length"):
+                    words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
+                    self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
+                output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, input_data, dtype=tf.float32, sequence_length=self.length)
+                #print(output)
 
-        self.output = output
+            outputs += [output[0],output[1]]
+
+        self.output = tf.concat(outputs, axis=2)
 
 
 class SeqAttnMatch():
@@ -42,16 +47,18 @@ class SeqAttnMatch():
         with tf.variable_scope('SeqAttnMatch'):
 
             W = tf.Variable(tf.random_normal(shape=[input_size, input_size], dtype=tf.float32))
-            # b = tf.Variable(tf.random_normal(([None, input_size]), dtype=tf.float32))
+            b = tf.Variable(tf.random_normal(([None, input_size]), dtype=tf.float32))
 
         # Project vectors
-        x_re = tf.reshape(x, [-1, input_size])
-        x_proj = tf.nn.relu(tf.matmul(x_re, W))
-        x_proj = tf.reshape(x_proj, [-1, x.get_shape().as_list()[1], input_size])
+        with tf.name_scope("proj_x"):
+            x_re = tf.reshape(x, [-1, input_size])
+            x_proj = tf.nn.relu(tf.add(tf.matmul(x_re, W),b))
+            x_proj = tf.reshape(x_proj, [-1, x.get_shape().as_list()[1], input_size])
 
-        y_re = tf.reshape(y, [-1, input_size])
-        y_proj = tf.nn.relu(tf.matmul(y_re, W))
-        y_proj = tf.reshape(y_proj, [-1, y.get_shape().as_list()[1], input_size])
+        with tf.name_scope("proj_y"):
+            y_re = tf.reshape(y, [-1, input_size])
+            y_proj = tf.nn.relu(tf.add(tf.matmul(y_re, W),b))
+            y_proj = tf.reshape(y_proj, [-1, y.get_shape().as_list()[1], input_size])
 
         # Compute scores
         scores = tf.matmul(x_proj, y_proj, transpose_b=True)
@@ -62,15 +69,15 @@ class SeqAttnMatch():
 
             alpha_flat = tf.exp(alpha_flat)
             z = tf.cast(tf.logical_not(y_mask), tf.float32)
-            z = tf.tile(z, [x.get_shape().as_list()[1],1])
+            #z = tf.tile(z, [x.get_shape().as_list()[1],1])
             alpha_flat = tf.multiply(alpha_flat, z)
 
             alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
-            alpha_soft = tf.clip_by_value(alpha_soft, 1e-7,1e10)
+            #alpha_soft = tf.clip_by_value(alpha_soft, 1e-7,1e10)
             alpha_soft = tf.expand_dims(alpha_soft, dim=1)
             alpha_soft = tf.tile(alpha_soft, [1,y.get_shape().as_list()[1]])
             alpha_flat = tf.div(alpha_flat, alpha_soft)
-            alpha_flat = tf.clip_by_value(alpha_flat, 1e-7, 1e10)
+            #alpha_flat = tf.clip_by_value(alpha_flat, 1e-7, 1e10)
 
         #alpha_flat = tf.nn.softmax()
         alpha = tf.reshape(alpha_flat,[-1, x.get_shape().as_list()[1], y.get_shape().as_list()[1]])
@@ -93,11 +100,8 @@ class BilinearSeqAttn():
         """
         with tf.variable_scope('BilinearSeqAttention'):
             W = tf.Variable(tf.truncated_normal([y_size,x_size], dtype=tf.float32))
-            #b = tf.Variable(tf.random_normal(([x_size]), dtype=tf.float32))
-            # Wy = tf.matmul(y, W)
-            #Wy = W * y + b
-
-            Wy = tf.matmul(y, W)
+            b = tf.Variable(tf.random_normal(([x_size]), dtype=tf.float32))
+            Wy = tf.add(tf.matmul(y, W),b)
 
             xWy = tf.matmul(x,tf.expand_dims(Wy, 2))
             xWy = tf.squeeze(xWy, 2, name="alpha")
@@ -118,13 +122,14 @@ class LinearSeqAttn():
         with tf.variable_scope("LinearSaqAttn"):
             W = tf.Variable(tf.truncated_normal([x_size[2],1]))
 
-        x_flat = tf.reshape(x, [-1, x_size[2]])
-        scores = tf.reshape(tf.matmul(x_flat, W),[-1,x_size[1]])
-        x_mask = tf.cast(tf.logical_not(x_mask), tf.float32)
+        with tf.name_scope("Attention"):
+            x_flat = tf.reshape(x, [-1, x_size[2]])
+            scores = tf.reshape(tf.matmul(x_flat, W),[-1,x_size[1]])
+            x_mask = tf.cast(tf.logical_not(x_mask), tf.float32)
 
-        scores = tf.multiply(tf.exp(scores),x_mask)
-        x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1), axis=1)
-        x_sum = tf.tile(x_sum, [1,x_size[1]])
+            scores = tf.multiply(tf.exp(scores),x_mask)
+            x_sum = tf.expand_dims(tf.reduce_sum(scores, axis=1), axis=1)
+            #x_sum = tf.tile(x_sum, [1,x_size[1]])
 
-        scores = tf.expand_dims(tf.div(scores, x_sum), axis=1)
-        self.weighted = tf.squeeze(tf.matmul(scores, x), axis=1)
+            scores = tf.expand_dims(tf.divide(scores, x_sum), axis=1)
+            self.weighted = tf.squeeze(tf.matmul(scores, x), axis=1)

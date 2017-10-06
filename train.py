@@ -20,17 +20,17 @@ parser = argparse.ArgumentParser(description='Train a Document Reader model.')
 parser.add_argument('--log_file', default='output.log',help='path for log file.')
 parser.add_argument('--log_per_updates', type=int, default=3, help='log model loss per x updates (mini-batches).')
 parser.add_argument('--data_file', default='./SQuAD/data.msgpack',help='path to preprocessed data file.')
-parser.add_argument('--model_dir', default='./summary/',help='path to store saved models.')
+parser.add_argument('--model_dir', default='./checkpoints/',help='path to store saved models.')
 parser.add_argument('--save_model_secs', type=int,default=1000,help='number of seconds to save a checkpoint')
 parser.add_argument('--eval_per_epoch', type=int, default=1,help='perform evaluation per x epoches.')
 parser.add_argument('--eval_per_step', type=int, default=2000,help='perform evaluation per x step.')
 parser.add_argument('--squad_dir', default='./SQuAD/',help='directory for SQuAD files')
 # training
-parser.add_argument('-e', '--epoches', type=int, default=4)
+parser.add_argument('-e', '--epoches', type=int, default=3)
 parser.add_argument('-bs', '--batch_size', type=int, default=32)
 parser.add_argument('-rs', '--resume', default=None,help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
 parser.add_argument('-gc', '--grad_clipping', type=float, default=10)
-parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
+parser.add_argument('-lr', '--learning_rate', type=float, default=0.005)
 parser.add_argument('-ds', '--decay_step', type=int, default=300)
 parser.add_argument('-ld', '--learning_decay', type=float, default=0.96, help="decay rate of learning rate for every decay_step")
 parser.add_argument('-tp', '--tune_partial', type=int, default=1000,help='finetune top-x embeddings.')
@@ -72,10 +72,15 @@ ch.setFormatter(formatter)
 log.addHandler(fh)
 log.addHandler(ch)
 
-def sendStatElastic(data, endpoint="http://52.48.27.79:9200/neural/testnn"):
+def sendStatElastic(data, endpoint="http://35.187.182.237:9200/neural/testnn"):
     data['step_time'] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    requests.post(endpoint, json=data)
-
+    try:
+        r = requests.post(endpoint, json=data)
+    except:
+        log.warning("Elasticsearch exception")
+        #log.warning(r.text)
+    finally:
+        pass
 
 def main():
     log.info('[program starts.]')

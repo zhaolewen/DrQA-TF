@@ -44,8 +44,6 @@ class DocReaderModel():
         with tf.name_scope("targets"):
             t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
             t_end = tf.one_hot(self.target_e, depth=len_d, name="target_end_onehot")
-            # t_start = tf.add(tf.scalar_mul(2.0, t_start),-1.0,name="t_start")
-            # t_end = tf.add(tf.scalar_mul(2.0, t_end), -1.0,name="t_end")
 
         # Compute loss and accuracies
         with tf.name_scope("loss"):

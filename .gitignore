@@ -2,3 +2,7 @@ summary/
 predictions.xlsx
 SQuAD/
 output.log
+glove/
+checkpoints/
+__pycache__/
+.idea/

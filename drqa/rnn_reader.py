@@ -59,21 +59,18 @@ class RnnDocReader():
         with tf.variable_scope('document'):
             self.doc_rnn = layers.StackedBRNN(input_data=drnn_input, hidden_size=opt['hidden_size'], num_layers=opt['doc_layers'],dropout_rate=opt['dropout_rnn'])
             doc_hiddens = self.doc_rnn.output
-            doc_hiddens = tf.concat([doc_hiddens[0], doc_hiddens[1]], axis=2)
+            print(doc_hiddens)
+            #doc_hiddens = tf.concat([doc_hiddens[0], doc_hiddens[1]], axis=2)
 
         # RNN question encoder
         with tf.variable_scope('question'):
             self.question_rnn = layers.StackedBRNN(input_data=x2_emb, hidden_size=opt['hidden_size'], num_layers=opt['question_layers'],dropout_rate=opt['dropout_rnn'])
             # Encode question with RNN + merge hiddens
             question_hiddens = self.question_rnn.output
-            question_hiddens = tf.concat([question_hiddens[0], question_hiddens[1]], axis=2)
-
-            #q_merge_weights = layers.uniform_weights(question_hiddens, x2_mask)
-            #question_hidden = layers.weighted_avg(question_hiddens, q_merge_weights)
+            #question_hiddens = tf.concat([question_hiddens[0], question_hiddens[1]], axis=2)
 
             q_weight_layer = layers.LinearSeqAttn(question_hiddens, x2_mask)
 
-            #question_hidden = tf.reduce_mean(question_hiddens, 1)
             question_hidden = q_weight_layer.weighted
 
         # Output sizes of rnn encoders
