@@ -56,12 +56,14 @@ class SeqAttnMatch():
         # Project vectors
         with tf.name_scope("proj_x"):
             x_re = tf.reshape(x, [-1, input_size])
-            x_proj = tf.nn.relu(tf.add(tf.matmul(x_re, W),b))
+            #x_proj = tf.nn.relu(tf.add(tf.matmul(x_re, W),b))
+            x_proj = tf.nn.relu(tf.matmul(x_re, W))
             x_proj = tf.reshape(x_proj, [-1, x.get_shape().as_list()[1], input_size])
 
         with tf.name_scope("proj_y"):
             y_re = tf.reshape(y, [-1, input_size])
-            y_proj = tf.nn.relu(tf.add(tf.matmul(y_re, W),b))
+            y_proj = tf.nn.relu(tf.matmul(y_re, W))
+            #y_proj = tf.nn.relu(tf.add(tf.matmul(y_re, W), b))
             y_proj = tf.reshape(y_proj, [-1, y.get_shape().as_list()[1], input_size])
 
         # Compute scores
