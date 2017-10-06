@@ -51,7 +51,7 @@ class SeqAttnMatch():
         with tf.variable_scope('SeqAttnMatch'):
 
             W = tf.Variable(tf.random_normal(shape=[input_size, input_size], dtype=tf.float32))
-            b = tf.Variable(tf.random_normal(([None, input_size]), dtype=tf.float32))
+            b = tf.Variable(tf.random_normal([None, input_size], dtype=tf.float32))
 
         # Project vectors
         with tf.name_scope("proj_x"):
