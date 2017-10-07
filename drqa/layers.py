@@ -38,7 +38,7 @@ class StackedBRNN():
 
             outputs += [output[0],output[1]]
 
-        self.output = tf.concat(outputs, axis=2)
+        self.output = tf.nn.dropout(tf.concat(outputs, axis=2), keep_prob=dropout_rate)
 
 
 class SeqAttnMatch():

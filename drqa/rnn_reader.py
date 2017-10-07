@@ -18,7 +18,7 @@ class RnnDocReader():
         # Word embeddings
         if opt['pretrained_words']:
             assert embedding is not None
-            embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var")
+            embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var", trainable=False)
             embedCst = tf.constant(embedding[opt['tune_partial']:], dtype=tf.float32, name="embed_cst")
 
             embedding = tf.concat([embedVar, embedCst], axis=0, name="word_embed")
