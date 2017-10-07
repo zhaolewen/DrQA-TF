@@ -49,6 +49,7 @@ class DocReaderModel():
         with tf.name_scope("loss"):
             self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_start, logits=self.score_s)) \
                + tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=t_end, logits=self.score_e))
+            #self.loss = tf.losses.log_loss(t_start, tf.nn.log_softmax(self.score_s)) + tf.losses.log_loss(t_end, tf.nn.log_softmax(self.score_e))
 
         self.learning_rate = tf.train.exponential_decay(opt['learning_rate'], self.global_step,opt["decay_step"], opt['learning_decay'], staircase=True)
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate)

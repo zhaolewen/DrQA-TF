@@ -51,19 +51,19 @@ class SeqAttnMatch():
         with tf.variable_scope('SeqAttnMatch'):
 
             W = tf.Variable(tf.random_normal(shape=[input_size, input_size], dtype=tf.float32))
-            # b = tf.Variable(tf.random_normal(shape=[None, input_size], dtype=tf.float32))
+            b = tf.Variable(tf.random_normal(shape=[input_size], dtype=tf.float32))
 
         # Project vectors
         with tf.name_scope("proj_x"):
             x_re = tf.reshape(x, [-1, input_size])
-            #x_proj = tf.nn.relu(tf.add(tf.matmul(x_re, W),b))
-            x_proj = tf.nn.relu(tf.matmul(x_re, W))
+            x_proj = tf.nn.relu(tf.add(tf.matmul(x_re, W),b))
+            #x_proj = tf.nn.relu(tf.matmul(x_re, W))
             x_proj = tf.reshape(x_proj, [-1, x.get_shape().as_list()[1], input_size])
 
         with tf.name_scope("proj_y"):
             y_re = tf.reshape(y, [-1, input_size])
-            y_proj = tf.nn.relu(tf.matmul(y_re, W))
-            #y_proj = tf.nn.relu(tf.add(tf.matmul(y_re, W), b))
+            #y_proj = tf.nn.relu(tf.matmul(y_re, W))
+            y_proj = tf.nn.relu(tf.add(tf.matmul(y_re, W), b))
             y_proj = tf.reshape(y_proj, [-1, y.get_shape().as_list()[1], input_size])
 
         # Compute scores
@@ -72,17 +72,18 @@ class SeqAttnMatch():
         # Normalize with softmax
         with tf.name_scope("softmax"):
             alpha_flat = tf.reshape(scores,[-1, y.get_shape().as_list()[1]])
+            alpha_flat = tf.nn.softmax(alpha_flat)
 
-            alpha_flat = tf.exp(alpha_flat)
-            z = tf.cast(tf.logical_not(y_mask), tf.float32)
+            #alpha_flat = tf.exp(alpha_flat)
+            #z = tf.cast(tf.logical_not(y_mask), tf.float32)
             #z = tf.tile(z, [x.get_shape().as_list()[1],1])
-            alpha_flat = tf.multiply(alpha_flat, z)
+            #alpha_flat = tf.multiply(alpha_flat, z)
 
-            alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
+            #alpha_soft = tf.reduce_sum(alpha_flat, axis=1)
             #alpha_soft = tf.clip_by_value(alpha_soft, 1e-7,1e10)
-            alpha_soft = tf.expand_dims(alpha_soft, dim=1)
-            alpha_soft = tf.tile(alpha_soft, [1,y.get_shape().as_list()[1]])
-            alpha_flat = tf.div(alpha_flat, alpha_soft)
+            #alpha_soft = tf.expand_dims(alpha_soft, dim=1)
+            #alpha_soft = tf.tile(alpha_soft, [1,y.get_shape().as_list()[1]])
+            #alpha_flat = tf.div(alpha_flat, alpha_soft)
             #alpha_flat = tf.clip_by_value(alpha_flat, 1e-7, 1e10)
 
         #alpha_flat = tf.nn.softmax()
@@ -106,7 +107,7 @@ class BilinearSeqAttn():
         """
         with tf.variable_scope('BilinearSeqAttention'):
             W = tf.Variable(tf.truncated_normal([y_size,x_size], dtype=tf.float32))
-            b = tf.Variable(tf.random_normal(([x_size]), dtype=tf.float32))
+            b = tf.Variable(tf.random_normal([x_size], dtype=tf.float32))
             Wy = tf.add(tf.matmul(y, W),b)
 
             xWy = tf.matmul(x,tf.expand_dims(Wy, 2))

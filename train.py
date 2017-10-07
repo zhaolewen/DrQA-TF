@@ -30,14 +30,14 @@ parser.add_argument('-e', '--epoches', type=int, default=3)
 parser.add_argument('-bs', '--batch_size', type=int, default=32)
 parser.add_argument('-rs', '--resume', default=None,help='previous model file name (in `model_dir`). e.g. "checkpoint_epoch_11.pt"')
 parser.add_argument('-gc', '--grad_clipping', type=float, default=10)
-parser.add_argument('-lr', '--learning_rate', type=float, default=0.005)
+parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
 parser.add_argument('-ds', '--decay_step', type=int, default=300)
 parser.add_argument('-ld', '--learning_decay', type=float, default=0.96, help="decay rate of learning rate for every decay_step")
 parser.add_argument('-tp', '--tune_partial', type=int, default=1000,help='finetune top-x embeddings.')
 parser.add_argument('--fix_embeddings', action='store_true',help='if true, `tune_partial` will be ignored.')
 # model
-parser.add_argument('--doc_layers', type=int, default=3)
-parser.add_argument('--question_layers', type=int, default=3)
+parser.add_argument('--doc_layers', type=int, default=1)
+parser.add_argument('--question_layers', type=int, default=1)
 parser.add_argument('--hidden_size', type=int, default=128)
 parser.add_argument('--num_features', type=int, default=4)
 parser.add_argument('--pos', type=bool, default=True)
@@ -46,7 +46,7 @@ parser.add_argument('--pos_dim', type=int, default=12, help='the embedding dimen
 parser.add_argument('--ner', type=bool, default=True)
 parser.add_argument('--ner_size', type=int, default=19, help='how many kinds of named entity tags.')
 parser.add_argument('--ner_dim', type=int, default=8, help='the embedding dimension for named entity tags.')
-parser.add_argument('--use_qemb', type=bool, default=False)
+parser.add_argument('--use_qemb', type=bool, default=True)
 parser.add_argument('--concat_rnn_layers', type=bool, default=True)
 parser.add_argument('--dropout_rnn', type=float, default=0.7)
 parser.add_argument('--max_len', type=int, default=15)
@@ -133,7 +133,7 @@ def main():
                         em, f1 = score(predictions, dev_y)
                         sendStatElastic({"phase": "test", "name": "DrQA", "run_name": run_name, "step": float(step),"precision": float(em), "f1": float(f1), "epoch": epoch})
                         log.warning("dev EM: {} F1: {}".format(em, f1))
-                        test_count += 1
+                        test_count = step //args.eval_per_step
 
                 epoch += 1
 

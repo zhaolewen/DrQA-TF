@@ -18,18 +18,21 @@ class RnnDocReader():
         # Word embeddings
         if opt['pretrained_words']:
             assert embedding is not None
-            self.embedding = tf.constant(embedding, dtype=tf.float32, name="word_embed")
+            embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var")
+            embedCst = tf.constant(embedding[opt['tune_partial']:], dtype=tf.float32, name="embed_cst")
+
+            embedding = tf.concat([embedVar, embedCst], axis=1, name="word_embed")
         else:
-            self.embedding = tf.Variable(tf.random_normal((opt['vocab_size'], opt['embedding_dim']), 0.0, 1.0))
+            embedding = tf.Variable(tf.random_normal((opt['vocab_size'], opt['embedding_dim']), 0.0, 1.0), name="word_embed")
 
         # Embed both document and question
-        x1_emb = tf.nn.embedding_lookup(self.embedding, x1)
-        x2_emb = tf.nn.embedding_lookup(self.embedding, x2)
+        x1_emb = tf.nn.embedding_lookup(embedding, x1)
+        x2_emb = tf.nn.embedding_lookup(embedding, x2)
 
         drnn_input_list = [x1_emb, x1_f]
         # Add attention-weighted question representation
-        self.pos_embedding = tf.Variable(tf.random_normal((opt['pos_size'], opt['pos_dim']), 0.0, 1.0),name="pos_embed")
-        self.ner_embedding = tf.Variable(tf.random_normal((opt['ner_size'], opt['ner_dim']), 0.0, 1.0),name="ner_embed")
+        pos_embedding = tf.Variable(tf.random_normal((opt['pos_size'], opt['pos_dim']), 0.0, 1.0),name="pos_embed")
+        ner_embedding = tf.Variable(tf.random_normal((opt['ner_size'], opt['ner_dim']), 0.0, 1.0),name="ner_embed")
 
         if self.opt['use_qemb']:
             # Projection for attention weighted question
@@ -39,10 +42,10 @@ class RnnDocReader():
             drnn_input_list.append(x2_weighted_emb)
 
         if self.opt['pos']:
-            x1_pos_emb = tf.nn.embedding_lookup(self.pos_embedding, x1_pos)
+            x1_pos_emb = tf.nn.embedding_lookup(pos_embedding, x1_pos)
             drnn_input_list.append(x1_pos_emb)
         if self.opt['ner']:
-            x1_ner_emb = tf.nn.embedding_lookup(self.ner_embedding, x1_ner)
+            x1_ner_emb = tf.nn.embedding_lookup(ner_embedding, x1_ner)
             drnn_input_list.append(x1_ner_emb)
 
         drnn_input = tf.concat(drnn_input_list, axis=2)
