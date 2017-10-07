@@ -1,12 +1,20 @@
 import tensorflow as tf
 
 def lstm_cell(hidden, drop_keep):
-    basic = tf.nn.rnn_cell.LSTMCell(num_units=hidden, state_is_tuple=True)
+    basic = tf.nn.rnn_cell.BasicLSTMCell(num_units=hidden, state_is_tuple=True)
     cell = tf.nn.rnn_cell.DropoutWrapper(cell=basic, output_keep_prob=drop_keep)
     return cell
 
+def length(sequence):
+  used = tf.sign(tf.reduce_max(tf.abs(sequence), 2))
+  length = tf.reduce_sum(used, 1)
+  length = tf.cast(length, tf.int32)
+  return length
+
 class StackedBRNN():
     def __init__(self, input_data, hidden_size, num_layers,dropout_rate=0.7):
+        with tf.name_scope("doc_length"):
+            seq_len = length(input_data)
 
         outputs = []
         last_output = input_data
@@ -21,11 +29,10 @@ class StackedBRNN():
                     bw_cell = lstm_cell(hidden_size, dropout_rate)
                     # print(bw_cell.state_size)
 
-                with tf.name_scope("doc_length"):
-                    words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
-                    self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
+                    #words_used_in_sent = tf.sign(tf.reduce_max(tf.abs(input_data), reduction_indices=2))
+                    #self.length = tf.cast(tf.reduce_sum(words_used_in_sent, reduction_indices=1), tf.int32)
 
-                output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, last_output, dtype=tf.float32, sequence_length=self.length)
+                output, _ = tf.nn.bidirectional_dynamic_rnn(fw_cell, bw_cell, last_output, dtype=tf.float32, sequence_length=seq_len)
                 #print(output)
                 last_output = tf.concat([output[0],output[1]], axis=2)
 
