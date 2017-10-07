@@ -36,8 +36,8 @@ parser.add_argument('-ld', '--learning_decay', type=float, default=0.96, help="d
 parser.add_argument('-tp', '--tune_partial', type=int, default=1000,help='finetune top-x embeddings.')
 parser.add_argument('--fix_embeddings', action='store_true',help='if true, `tune_partial` will be ignored.')
 # model
-parser.add_argument('--doc_layers', type=int, default=1)
-parser.add_argument('--question_layers', type=int, default=1)
+parser.add_argument('--doc_layers', type=int, default=2)
+parser.add_argument('--question_layers', type=int, default=2)
 parser.add_argument('--hidden_size', type=int, default=128)
 parser.add_argument('--num_features', type=int, default=4)
 parser.add_argument('--pos', type=bool, default=True)
@@ -46,10 +46,10 @@ parser.add_argument('--pos_dim', type=int, default=12, help='the embedding dimen
 parser.add_argument('--ner', type=bool, default=True)
 parser.add_argument('--ner_size', type=int, default=19, help='how many kinds of named entity tags.')
 parser.add_argument('--ner_dim', type=int, default=8, help='the embedding dimension for named entity tags.')
-parser.add_argument('--use_qemb', type=bool, default=True)
+parser.add_argument('--use_qemb', type=bool, default=False)
 parser.add_argument('--concat_rnn_layers', type=bool, default=True)
 parser.add_argument('--dropout_rnn', type=float, default=0.7)
-parser.add_argument('--max_len', type=int, default=15)
+parser.add_argument('--max_len', type=int, default=10)
 
 args = parser.parse_args()
 
