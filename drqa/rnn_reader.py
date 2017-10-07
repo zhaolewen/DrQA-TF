@@ -21,7 +21,7 @@ class RnnDocReader():
             embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var")
             embedCst = tf.constant(embedding[opt['tune_partial']:], dtype=tf.float32, name="embed_cst")
 
-            embedding = tf.concat([embedVar, embedCst], axis=1, name="word_embed")
+            embedding = tf.concat([embedVar, embedCst], axis=0, name="word_embed")
         else:
             embedding = tf.Variable(tf.random_normal((opt['vocab_size'], opt['embedding_dim']), 0.0, 1.0), name="word_embed")
 
