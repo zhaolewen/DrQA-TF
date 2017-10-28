@@ -36,10 +36,10 @@ class DocReaderModel():
 
         # Building network.
         #  x1, x1_f, x1_pos, x1_ner, x1_mask, x2, x2_mask, opt
-        self.network = RnnDocReader(self.doc_words, self.word_feat,self.pos, self.ner, self.doc_mask, self.q_words, self.q_mask ,opt, embedding=embedding)
+        network = RnnDocReader(self.doc_words, self.word_feat,self.pos, self.ner, self.doc_mask, self.q_words, self.q_mask ,opt, embedding=embedding)
 
         # Run forward
-        self.score_s, self.score_e = self.network.start_scores, self.network.end_scores
+        self.score_s, self.score_e = network.start_scores, network.end_scores
 
         with tf.name_scope("targets"):
             t_start = tf.one_hot(self.target_s, depth=len_d, name="target_start_onehot")
@@ -52,13 +52,18 @@ class DocReaderModel():
             #self.loss = tf.losses.log_loss(t_start, tf.nn.log_softmax(self.score_s)) + tf.losses.log_loss(t_end, tf.nn.log_softmax(self.score_e))
 
         self.learning_rate = tf.train.exponential_decay(opt['learning_rate'], self.global_step,opt["decay_step"], opt['learning_decay'], staircase=True)
-        self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+        #self.optimizer = tf.train.AdamOptimizer(self.learning_rate)
+        #norm = tf.constant(opt['grad_clipping'])
+        #optimizer = tf.contrib.keras.optimizers.Adamax(lr=self.learning_rate)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
-        gvs = self.optimizer.compute_gradients(self.loss)
-        val = self.opt['grad_clipping']
-        capped_gvs = [(tf.clip_by_value(grad, -val, val), var) for grad, var in gvs]
+        gvs = optimizer.compute_gradients(self.loss)
+        val = opt['grad_clipping']
+        capped_gvs = [(tf.clip_by_norm(grad, val), var) for grad, var in gvs]
 
-        self.train_op = self.optimizer.apply_gradients(capped_gvs, global_step=self.global_step)
+        self.train_op = optimizer.apply_gradients(capped_gvs, global_step=self.global_step)
+        #params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        #self.train_op = optimizer.get_updates(loss=self.loss, params=params,constraints=[])
 
     def train(self, batch, sess):
         feed_dict = {

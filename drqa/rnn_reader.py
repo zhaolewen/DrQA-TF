@@ -18,7 +18,7 @@ class RnnDocReader():
         # Word embeddings
         if opt['pretrained_words']:
             assert embedding is not None
-            embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var", trainable=False)
+            embedVar = tf.Variable(embedding[:opt['tune_partial']], name="embad_var")
             embedCst = tf.constant(embedding[opt['tune_partial']:], dtype=tf.float32, name="embed_cst")
 
             embedding = tf.concat([embedVar, embedCst], axis=0, name="word_embed")
@@ -34,17 +34,17 @@ class RnnDocReader():
         pos_embedding = tf.Variable(tf.random_normal((opt['pos_size'], opt['pos_dim']), 0.0, 1.0),name="pos_embed")
         ner_embedding = tf.Variable(tf.random_normal((opt['ner_size'], opt['ner_dim']), 0.0, 1.0),name="ner_embed")
 
-        if self.opt['use_qemb']:
+        if opt['use_qemb']:
             # Projection for attention weighted question
             self.qemb_match = layers.SeqAttnMatch(opt['embedding_dim'], x1_emb, x2_emb, x2_mask)
 
             x2_weighted_emb = self.qemb_match.matched_seq
             drnn_input_list.append(x2_weighted_emb)
 
-        if self.opt['pos']:
+        if opt['pos']:
             x1_pos_emb = tf.nn.embedding_lookup(pos_embedding, x1_pos)
             drnn_input_list.append(x1_pos_emb)
-        if self.opt['ner']:
+        if opt['ner']:
             x1_ner_emb = tf.nn.embedding_lookup(ner_embedding, x1_ner)
             drnn_input_list.append(x1_ner_emb)
 
